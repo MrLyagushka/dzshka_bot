@@ -1,21 +1,32 @@
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 
-const API_URL = "https://dzshka.mrnoandmrno.ru:7999"
+const API_URL = "https://dzshka.mrnoandmrno.ru:7999";
 
-export default function GetListOfMedicines () {
-    const [medicines, setMedicines] = useState([])
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState(null)
+// Получаем user_id из Telegram WebApp (или заглушка для локальных тестов)
+const getUserId = () => {
+    const user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    return user?.id || 123456789; // ← В продакшене уберите заглушку
+};
+
+export default function GetListOfMedicines() {
+    const [medicines, setMedicines] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     
-    const getInitData = () => window.Telegram?.WebApp?.InitData || ''
+    const userId = getUserId();
 
     const fetchMedicines = async () => {
         setLoading(true);
         try {
-        const res = await fetch(`${API_URL}/api/medicines`, {
-            headers: { 'X-Telegram-InitData': getInitData() }
-        });
-        if (!res.ok) throw new Error('Ошибка загрузки или авторизации');
+            const res = await fetch(`${API_URL}/api/medicines`, {
+                method: "POST",  // ← POST, чтобы передать тело с user_id
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId })
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || "Ошибка загрузки");
+            }
             const data = await res.json();
             setMedicines(data);
         } catch (err) {
@@ -27,21 +38,24 @@ export default function GetListOfMedicines () {
 
     const handleMark = async (id) => {
         try {
-        const res = await fetch(`${API_URL}/api/medicines/${id}/mark`, {
-            method: 'POST',
-            headers: { 'X-Telegram-InitData': getInitData() }
-        });
-        if (!res.ok) throw new Error('Не удалось обновить статус');
-        // Перезагружаем список, чтобы отобразить новый статус
-        fetchMedicines();
+            const res = await fetch(`${API_URL}/api/medicines/${id}/mark`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: userId })
+            });
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.detail || "Не удалось обновить статус");
+            }
+            // Перезагружаем список, чтобы отобразить новый статус
+            fetchMedicines();
         } catch (err) {
-        setError(err.message);
+            setError(err.message);
         }
     };
 
     useEffect(() => {
         fetchMedicines();
-        // Сообщаем Telegram, что мини-апп готов
         window.Telegram?.WebApp?.ready();
     }, []);
 
@@ -50,44 +64,46 @@ export default function GetListOfMedicines () {
 
     return (
         <div style={{ padding: '16px', fontFamily: 'system-ui, sans-serif' }}>
-        <h2 style={{ marginBottom: '16px', margin: 0 }}>Журнал лекарств</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
-            {medicines.length === 0 && <p style={{color: '#888'}}>Нет назначенных лекарств</p>}
+            <h2 style={{ marginBottom: '16px', margin: 0 }}>Журнал лекарств</h2>
             
-            {medicines.map(med => (
-            <div key={med.id} style={{
-                padding: '12px',
-                background: med.is_taken ? '#e8f5e9' : '#ffffff',
-                borderRadius: '12px',
-                border: '1px solid #e0e0e0',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                transition: 'background 0.2s'
-            }}>
-                <div>
-                <div style={{ fontWeight: '600', fontSize: '15px' }}>{med.name}</div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{med.scheduled_time}</div>
-                </div>
-                <button
-                onClick={() => handleMark(med.id)}
-                style={{
-                    padding: '8px 14px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: med.is_taken ? '#4CAF50' : '#f44336',
-                    color: 'white',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                    fontSize: '13px'
-                }}
-                >
-                {med.is_taken ? '✅ Принято' : '⬜ Отметить'}
-                </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
+                {medicines.length === 0 && <p style={{color: '#888'}}>Нет назначенных лекарств</p>}
+                
+                {medicines.map(med => (
+                    <div key={med.id} style={{
+                        padding: '12px',
+                        background: med.is_taken ? '#e8f5e9' : '#ffffff',
+                        borderRadius: '12px',
+                        border: '1px solid #e0e0e0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        transition: 'background 0.2s'
+                    }}>
+                        <div>
+                            <div style={{ fontWeight: '600', fontSize: '15px' }}>{med.name}</div>
+                            <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>
+                                {med.scheduled_time || 'Время не указано'}
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => handleMark(med.id)}
+                            style={{
+                                padding: '8px 14px',
+                                borderRadius: '8px',
+                                border: 'none',
+                                background: med.is_taken ? '#4CAF50' : '#f44336',
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontWeight: '500',
+                                fontSize: '13px'
+                            }}
+                        >
+                            {med.is_taken ? '✅ Принято' : '⬜ Отметить'}
+                        </button>
+                    </div>
+                ))}
             </div>
-            ))}
-        </div>
         </div>
     );
 }
