@@ -36,23 +36,23 @@ export default function GetListOfMedicines() {
         }
     };
 
-    const handleMark = async (id) => {
-        try {
-            const res = await fetch(`${API_URL}/api/medicines/${id}/mark`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: userId })
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(() => ({}));
-                throw new Error(errData.detail || "Не удалось обновить статус");
-            }
-            // Перезагружаем список, чтобы отобразить новый статус
-            fetchMedicines();
-        } catch (err) {
-            setError(err.message);
-        }
-    };
+    // const handleMark = async (id) => {
+    //     try {
+    //         const res = await fetch(`${API_URL}/api/medicines/${id}/mark`, {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({ user_id: userId })
+    //         });
+    //         if (!res.ok) {
+    //             const errData = await res.json().catch(() => ({}));
+    //             throw new Error(errData.detail || "Не удалось обновить статус");
+    //         }
+    //         // Перезагружаем список, чтобы отобразить новый статус
+    //         fetchMedicines();
+    //     } catch (err) {
+    //         setError(err.message);
+    //     }
+    // };
 
     useEffect(() => {
         fetchMedicines();
@@ -86,21 +86,6 @@ export default function GetListOfMedicines() {
                                 {med.scheduled_time || 'Время не указано'}
                             </div>
                         </div>
-                        <button
-                            onClick={() => handleMark(med.id)}
-                            style={{
-                                padding: '8px 14px',
-                                borderRadius: '8px',
-                                border: 'none',
-                                background: med.is_taken ? '#4CAF50' : '#f44336',
-                                color: 'white',
-                                cursor: 'pointer',
-                                fontWeight: '500',
-                                fontSize: '13px'
-                            }}
-                        >
-                            {med.is_taken ? '✅ Принято' : '⬜ Отметить'}
-                        </button>
                     </div>
                 ))}
             </div>
