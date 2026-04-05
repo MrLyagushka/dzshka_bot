@@ -1,6 +1,6 @@
 import { useState, useEffect, use } from "react";
 
-const API_URL = "https://dzshka.mrnoandmrno.ru:7999/"
+const API_URL = "https://dzshka.mrnoandmrno.ru:7999"
 
 export default function GetListOfMedicines () {
     const [medicines, setMedicines] = useState([])
